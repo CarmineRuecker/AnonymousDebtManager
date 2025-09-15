@@ -5,10 +5,11 @@
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
-  "routes": [
+  "trailingSlash": false,
+  "rewrites": [
     {
-      "src": "/(.*)",
-      "dest": "/index.html"
+      "source": "/(.*)",
+      "destination": "/index.html"
     }
   ],
   "headers": [
