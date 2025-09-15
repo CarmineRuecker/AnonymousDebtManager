@@ -7,13 +7,13 @@ export const CONTRACT_ADDRESS = '0x14e09216003ca55Bbe69884A9D27A52c584fE890' // 
 export const SEPOLIA_CHAIN_ID = '0xaa36a7' // 11155111 in hex
 export const SEPOLIA_CHAIN_ID_DECIMAL = 11155111
 
-// Infura/Alchemy endpoints for Sepolia (add your API key)
+// Reliable public Sepolia RPC endpoints
 export const SEPOLIA_RPC_URLS = [
-  'https://sepolia.infura.io/v3/YOUR_INFURA_KEY',
-  'https://eth-sepolia.g.alchemy.com/v2/YOUR_ALCHEMY_KEY',
-  'https://sepolia.gateway.tenderly.co',
   'https://rpc.sepolia.org',
-  'https://sepolia.etherscan.io/api',
+  'https://sepolia.gateway.tenderly.co',
+  'https://rpc2.sepolia.org',
+  'https://ethereum-sepolia.publicnode.com',
+  'https://sepolia.drpc.org',
 ]
 
 export const SEPOLIA_CONFIG = {

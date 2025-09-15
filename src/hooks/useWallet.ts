@@ -102,11 +102,16 @@ export const useWallet = () => {
     return true
   }, [setStatus])
 
-  // Switch or add Sepolia network
+  // Switch or add Sepolia network with improved error handling
   const switchToSepolia = useCallback(async (): Promise<boolean> => {
-    if (!window.ethereum) return false
+    if (!window.ethereum) {
+      setStatus('MetaMask not detected. Please install MetaMask browser extension.', true)
+      return false
+    }
 
     try {
+      setStatus('Switching to Sepolia test network...')
+      
       // First try to switch to Sepolia
       await window.ethereum.request({
         method: 'wallet_switchEthereumChain',
@@ -114,14 +119,21 @@ export const useWallet = () => {
       })
       
       if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
-        console.log('[Wallet] Successfully switched to Sepolia')
+        console.log('[Wallet] Successfully switched to Sepolia network')
       }
+      setStatus('Successfully connected to Sepolia testnet! 🌐')
       return true
 
     } catch (switchError: any) {
+      if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
+        console.log('[Wallet] Switch error code:', switchError.code)
+        console.log('[Wallet] Switch error message:', switchError.message)
+      }
+
       // If Sepolia is not added to MetaMask, add it
-      if (switchError.code === 4902) {
+      if (switchError.code === 4902 || switchError.code === -32603) {
         try {
+          setStatus('Adding Sepolia network to MetaMask...')
           await window.ethereum.request({
             method: 'wallet_addEthereumChain',
             params: [SEPOLIA_CONFIG],
@@ -130,20 +142,24 @@ export const useWallet = () => {
           if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
             console.log('[Wallet] Successfully added Sepolia to MetaMask')
           }
+          setStatus('Successfully added Sepolia network! 🌐')
           return true
 
         } catch (addError: any) {
           if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
-            console.error('[Wallet] Failed to add Sepolia:', addError)
+            console.error('[Wallet] Failed to add Sepolia network:', addError)
           }
-          setStatus('Failed to add Sepolia network to MetaMask.', true)
+          setStatus('Failed to add Sepolia network. Please add it manually in MetaMask.', true)
           return false
         }
+      } else if (switchError.code === 4001) {
+        setStatus('Network switch was rejected by user.', true)
+        return false
       } else {
         if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
-          console.error('[Wallet] Failed to switch networks:', switchError)
+          console.error('[Wallet] Unexpected network switch error:', switchError)
         }
-        setStatus(parseContractError(switchError), true)
+        setStatus('Failed to switch to Sepolia network. Please switch manually in MetaMask.', true)
         return false
       }
     }
