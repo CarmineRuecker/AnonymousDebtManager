@@ -151,7 +151,7 @@ export const useWallet = () => {
 
   // Validate contract deployment
   const validateContract = useCallback(async (provider: ethers.BrowserProvider): Promise<boolean> => {
-    if (CONTRACT_ADDRESS === '0x1BbD539D823242079D837C29878FAd11B8daF839') {
+    if (!CONTRACT_ADDRESS || CONTRACT_ADDRESS.length !== 42) {
       setStatus(STATUS_MESSAGES.CONTRACT_NOT_DEPLOYED, true)
       return false
     }

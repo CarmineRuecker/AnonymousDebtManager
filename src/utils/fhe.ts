@@ -1,36 +1,4 @@
-import { FhenixClient, EncryptionTypes } from "fhenixjs"
-
-// Initialize FHE client
-let fhenixClient: FhenixClient | null = null
-
-export const initializeFHE = async (provider: any): Promise<FhenixClient> => {
-  if (!fhenixClient) {
-    fhenixClient = new FhenixClient({ provider })
-  }
-  return fhenixClient
-}
-
-export const getFHEClient = (): FhenixClient => {
-  if (!fhenixClient) {
-    throw new Error("FHE client not initialized. Call initializeFHE first.")
-  }
-  return fhenixClient
-}
-
-// Encrypt a number to euint64 (for amounts)
-export const encryptAmount = async (value: number): Promise<string> => {
-  const client = getFHEClient()
-  const encrypted = await client.encrypt(value, EncryptionTypes.uint64)
-  return encrypted
-}
-
-// Encrypt a number to euint32 (for interest rates in basis points)
-export const encryptRate = async (value: number): Promise<string> => {
-  const client = getFHEClient()
-  const encrypted = await client.encrypt(value, EncryptionTypes.uint32)
-  return encrypted
-}
-
+// Simplified FHE utilities for frontend-only deployment
 // Convert amount to wei equivalent for smart contract
 export const convertToWeiEquivalent = (amount: number): number => {
   // Convert dollars to cents to avoid floating point issues
@@ -43,18 +11,6 @@ export const convertToBasisPoints = (rate: number): number => {
   return Math.round(rate * 100)
 }
 
-// Encrypt debt amount for contract
-export const encryptDebtAmount = async (amountUSD: number): Promise<string> => {
-  const weiEquivalent = convertToWeiEquivalent(amountUSD)
-  return await encryptAmount(weiEquivalent)
-}
-
-// Encrypt interest rate for contract
-export const encryptInterestRate = async (ratePercent: number): Promise<string> => {
-  const basisPoints = convertToBasisPoints(ratePercent)
-  return await encryptRate(basisPoints)
-}
-
 // Decrypt amount from wei equivalent back to USD
 export const convertFromWeiEquivalent = (weiEquivalent: number): number => {
   return weiEquivalent / 100
@@ -63,18 +19,6 @@ export const convertFromWeiEquivalent = (weiEquivalent: number): number => {
 // Convert basis points back to percentage
 export const convertFromBasisPoints = (basisPoints: number): number => {
   return basisPoints / 100
-}
-
-// Generate public key for sealing outputs
-export const generatePublicKey = async (): Promise<string> => {
-  const client = getFHEClient()
-  return await client.generatePublicKey()
-}
-
-// Unseal encrypted data
-export const unsealData = async (sealedData: string, privateKey: string): Promise<number> => {
-  const client = getFHEClient()
-  return await client.unseal(sealedData, privateKey)
 }
 
 // Utility to check if we're on FHE-compatible network

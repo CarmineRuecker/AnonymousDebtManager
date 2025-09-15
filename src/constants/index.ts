@@ -1,7 +1,7 @@
 // Real Blockchain Configuration for Anonymous Debt Restructuring Platform
 
 // IMPORTANT: Update this with your deployed contract address
-export const CONTRACT_ADDRESS = '0x1BbD539D823242079D837C29878FAd11B8daF839' // Deployed contract
+export const CONTRACT_ADDRESS = '0x14e09216003ca55Bbe69884A9D27A52c584fE890' // AnonymousDebtManager FHE contract
 
 // Real Sepolia Network Configuration
 export const SEPOLIA_CHAIN_ID = '0xaa36a7' // 11155111 in hex
@@ -46,41 +46,53 @@ export const FHEVM_CONFIG = {
   iconUrls: ['https://zama.ai/favicon.ico'],
 }
 
-// Real contract ABI for deployed AnonymousDebtManager FHE contract
+// AnonymousDebtManager FHE contract ABI with anonymous debt restructuring functionality
 export const CONTRACT_ABI = [
-  // Write functions (updated for FHE)
-  'function createDebt(bytes calldata _encryptedAmount, bytes calldata _encryptedInterestRate, uint256 _termInDays, bool _isAnonymous) external returns (uint256)',
-  'function proposeRestructuring(uint256 _debtId, bytes calldata _newEncryptedAmount, bytes calldata _newEncryptedRate, uint256 _newTermInDays, string _reason) external returns (uint256)',
-  'function approveProposal(uint256 _proposalId, bool _approve) external',
-  'function executeProposal(uint256 _proposalId) external',
-  'function markDebtResolved(uint256 _debtId) external',
-  'function markDebtDefaulted(uint256 _debtId) external',
-  'function setAuthorizedCreditor(address _creditor, bool _authorized) external',
+  // Anonymous Debt Management Functions
+  'function createAnonymousDebt(uint256 amount, uint256 interestRate, uint256 termDays, bytes32 accessKey) external returns (uint256)',
+  'function proposeAnonymousRestructuring(uint256 debtId, uint256 newAmount, uint256 newInterestRate, uint256 newTermDays, string calldata reason, bytes32 accessKey) external returns (uint256)',
+  'function processAnonymousProposal(uint256 proposalId, bool approve, bytes32 accessKey) external',
+  'function finalizeAnonymousDebt(uint256 debtId, bytes32 accessKey) external',
+  'function enableAnonymousMode(uint256 debtId, bytes32 newAccessKey) external',
+  'function disableAnonymousMode(uint256 debtId, bytes32 accessKey) external',
   
-  // View functions (updated for FHE)
-  'function getDebtInfo(uint256 _debtId) external view returns (address, uint256, uint256, uint256, uint8, bool, bytes32)',
-  'function getEncryptedDebtAmount(uint256 _debtId, bytes32 publicKey) external view returns (bytes memory)',
-  'function getDecryptedDebtAmount(uint256 _debtId) external view returns (uint64)',
-  'function getEncryptedInterestRate(uint256 _debtId, bytes32 publicKey) external view returns (bytes memory)',
-  'function getDecryptedInterestRate(uint256 _debtId) external view returns (uint32)',
-  'function getUserDebts(address _user) external view returns (uint256[])',
-  'function getUserProposals(address _user) external view returns (uint256[])',
-  'function getProposalInfo(uint256 _proposalId) external view returns (uint256, address, uint256, uint256, uint8, string, bool, bool)',
-  'function getTotalDebts() external view returns (uint256)',
-  'function getTotalProposals() external view returns (uint256)',
+  // Privacy and Access Management
+  'function grantAnonymousAccess(uint256 debtId, address user, bytes32 accessKey) external',
+  'function revokeAnonymousAccess(uint256 debtId, address user, bytes32 accessKey) external',
+  'function updateAnonymousAccessKey(uint256 debtId, bytes32 oldKey, bytes32 newKey) external',
+  'function verifyAnonymousAccess(uint256 debtId, address user, bytes32 accessKey) external view returns (bool)',
   
-  // Public variables
+  // FHE-Style Encrypted Data Functions
+  'function getEncryptedDebtData(uint256 debtId, bytes32 accessKey) external view returns (bytes32, bytes32, bytes32)',
+  'function getEncryptedProposalData(uint256 proposalId, bytes32 accessKey) external view returns (bytes32, bytes32, bytes32)',
+  'function verifyEncryptedAmount(uint256 debtId, bytes32 expectedHash, bytes32 accessKey) external view returns (bool)',
+  'function verifyEncryptedRate(uint256 debtId, bytes32 expectedHash, bytes32 accessKey) external view returns (bool)',
+  
+  // Anonymous View Functions (Privacy Protected)
+  'function getAnonymousDebtInfo(uint256 debtId, bytes32 accessKey) external view returns (bytes32, bytes32, bytes32, uint256, uint256, uint8, bool)',
+  'function getAnonymousProposalInfo(uint256 proposalId, bytes32 accessKey) external view returns (uint256, bytes32, bytes32, bytes32, uint256, uint8, bool, string)',
+  'function getUserAnonymousDebts(address user, bytes32 accessKey) external view returns (uint256[])',
+  'function getUserAnonymousProposals(address user, bytes32 accessKey) external view returns (uint256[])',
+  
+  // Public Statistics (Non-Identifying)
+  'function getTotalAnonymousDebts() external view returns (uint256)',
+  'function getTotalAnonymousProposals() external view returns (uint256)',
+  'function getAnonymousDebtCount() external view returns (uint256)',
+  'function getResolvedAnonymousCount() external view returns (uint256)',
+  
+  // Standard Functions
   'function owner() external view returns (address)',
   'function nextDebtId() external view returns (uint256)',
   'function nextProposalId() external view returns (uint256)',
-  'function authorizedCreditors(address) external view returns (bool)',
+  'function anonymousMode() external view returns (bool)',
   
-  // Events
-  'event DebtCreated(uint256 indexed debtId, address indexed debtor, uint256 originalTerm, bool isAnonymous, uint256 timestamp)',
-  'event RestructuringProposed(uint256 indexed proposalId, uint256 indexed debtId, address indexed proposer, uint256 newTerm, uint256 timestamp)',
-  'event ProposalStatusChanged(uint256 indexed proposalId, uint8 newStatus, address indexed changedBy, uint256 timestamp)',
-  'event DebtStatusChanged(uint256 indexed debtId, uint8 newStatus, address indexed changedBy, uint256 timestamp)',
-  'event ApprovalGranted(uint256 indexed proposalId, address indexed approver, bool isCreditor, uint256 timestamp)',
+  // Anonymous Events (Privacy-First)
+  'event AnonymousDebtCreated(uint256 indexed debtId, bytes32 indexed encryptedDebtor, bytes32 encryptedAmount, bytes32 encryptedRate, uint256 timestamp)',
+  'event AnonymousRestructuringProposed(uint256 indexed proposalId, uint256 indexed debtId, bytes32 indexed encryptedProposer, bytes32 encryptedAmount, uint256 timestamp)',
+  'event AnonymousProposalProcessed(uint256 indexed proposalId, uint8 newStatus, bytes32 indexed encryptedProcessor, uint256 timestamp)',
+  'event AnonymousDebtFinalized(uint256 indexed debtId, uint8 finalStatus, bytes32 indexed encryptedFinalizer, uint256 timestamp)',
+  'event AnonymousAccessGranted(uint256 indexed debtId, bytes32 indexed encryptedUser, bytes32 accessKeyHash, uint256 timestamp)',
+  'event AnonymousAccessRevoked(uint256 indexed debtId, bytes32 indexed encryptedUser, bytes32 accessKeyHash, uint256 timestamp)',
 ]
 
 // Gas Estimation Configuration

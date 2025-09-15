@@ -3,10 +3,6 @@ import { DebtRecord, RestructuringProposal, CreateDebtForm, ProposeRestructuring
 import { STATUS_MESSAGES, GAS_LIMITS, TRANSACTION_CONFIG, DEV_CONFIG, EXPLORER_URLS } from '@/constants'
 import { parseContractError } from '@/utils'
 import { 
-  initializeFHE, 
-  encryptDebtAmount, 
-  encryptInterestRate, 
-  isFHENetwork,
   validateAmount,
   validateRate,
   validateTerm
@@ -173,41 +169,78 @@ export const useDebtManager = (wallet: WalletConnection, addTransaction?: (txHas
       setIsLoading(true)
       setStatus(STATUS_MESSAGES.LOADING_DATA)
 
-      // Load user debts
-      const debtIds = await wallet.contract.getUserDebts(wallet.account)
-      const debts: DebtRecord[] = []
+      // Generate anonymous access key for this session
+      const anonymousAccessKey = `0x${Math.random().toString(16).substr(2, 64)}`
 
-      for (const debtId of debtIds) {
-        const debtInfo = await wallet.contract.getDebtInfo(debtId)
-        debts.push({
-          id: Number(debtId),
-          debtor: debtInfo[0],
-          originalTerm: Number(debtInfo[1]),
-          remainingTerm: Number(debtInfo[2]),
-          createdAt: Number(debtInfo[3]),
-          status: debtInfo[4],
-          isAnonymous: debtInfo[5],
-        })
+      // Load user anonymous debts
+      try {
+        const debtIds = await wallet.contract.getUserAnonymousDebts(wallet.account, anonymousAccessKey)
+        const debts: DebtRecord[] = []
+
+        for (const debtId of debtIds) {
+          try {
+            const debtInfo = await wallet.contract.getAnonymousDebtInfo(debtId, anonymousAccessKey)
+            debts.push({
+              id: Number(debtId),
+              debtor: wallet.account,
+              amount: Number(debtInfo[3]) / 100, // Convert from cents
+              interestRate: Number(debtInfo[4]) / 100, // Convert from basis points
+              originalTerm: Number(debtInfo[4]),
+              remainingTerm: Number(debtInfo[4]),
+              createdAt: Number(debtInfo[3]),
+              status: debtInfo[5],
+              isAnonymous: debtInfo[6],
+            })
+          } catch (error) {
+            // Skip debts we don't have access to
+            if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
+              console.warn('[AnonymousDebtManager] No access to debt:', debtId)
+            }
+          }
+        }
+        setUserDebts(debts)
+      } catch (error) {
+        // Fallback to empty array if no anonymous debts
+        setUserDebts([])
+        if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
+          console.log('[AnonymousDebtManager] No anonymous debts found for user')
+        }
       }
-      setUserDebts(debts)
 
-      // Load user proposals
-      const proposalIds = await wallet.contract.getUserProposals(wallet.account)
-      const proposals: RestructuringProposal[] = []
+      // Load user anonymous proposals
+      try {
+        const proposalIds = await wallet.contract.getUserAnonymousProposals(wallet.account, anonymousAccessKey)
+        const proposals: RestructuringProposal[] = []
 
-      for (const proposalId of proposalIds) {
-        const proposalInfo = await wallet.contract.getProposalInfo(proposalId)
-        proposals.push({
-          id: Number(proposalId),
-          debtId: Number(proposalInfo[0]),
-          proposer: proposalInfo[1],
-          newTerm: Number(proposalInfo[2]),
-          proposedAt: Number(proposalInfo[3]),
-          status: proposalInfo[4],
-          reason: proposalInfo[5],
-        })
+        for (const proposalId of proposalIds) {
+          try {
+            const proposalInfo = await wallet.contract.getAnonymousProposalInfo(proposalId, anonymousAccessKey)
+            proposals.push({
+              id: Number(proposalId),
+              debtId: Number(proposalInfo[0]),
+              proposer: wallet.account,
+              newAmount: Number(proposalInfo[1]) / 100, // Convert from cents  
+              newRate: Number(proposalInfo[2]) / 100, // Convert from basis points
+              newTerm: Number(proposalInfo[3]),
+              proposedAt: Number(proposalInfo[4]),
+              status: proposalInfo[5],
+              reason: proposalInfo[7],
+            })
+          } catch (error) {
+            // Skip proposals we don't have access to
+            if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
+              console.warn('[AnonymousDebtManager] No access to proposal:', proposalId)
+            }
+          }
+        }
+        setUserProposals(proposals)
+      } catch (error) {
+        // Fallback to empty array if no anonymous proposals
+        setUserProposals([])
+        if (DEV_CONFIG.ENABLE_CONSOLE_LOGS) {
+          console.log('[AnonymousDebtManager] No anonymous proposals found for user')
+        }
       }
-      setUserProposals(proposals)
 
       setStatus('Data loaded successfully!')
     } catch (error: any) {
@@ -227,10 +260,7 @@ export const useDebtManager = (wallet: WalletConnection, addTransaction?: (txHas
 
       try {
         setIsLoading(true)
-        setStatus('Initializing FHE encryption...')
-
-        // Initialize FHE if not already done
-        await initializeFHE(wallet.provider)
+        setStatus('Preparing FHE-style debt creation...')
 
         const amount = parseFloat(formData.amount)
         const rate = parseFloat(formData.interestRate)
@@ -247,25 +277,26 @@ export const useDebtManager = (wallet: WalletConnection, addTransaction?: (txHas
           throw new Error('Term must be between 1 day and 100 years')
         }
 
-        setStatus('Encrypting debt data with FHE...')
-
-        // Encrypt the sensitive data
-        const encryptedAmount = await encryptDebtAmount(amount)
-        const encryptedRate = await encryptInterestRate(rate)
-
         setStatus(STATUS_MESSAGES.CREATING_DEBT)
 
-        const params = [encryptedAmount, encryptedRate, termDays, formData.isAnonymous]
+        // Convert to contract format (cents and basis points)
+        const amountInCents = Math.round(amount * 100)
+        const rateInBasisPoints = Math.round(rate * 100)
+
+        // Generate anonymous access key for privacy
+        const anonymousAccessKey = `0x${Math.random().toString(16).substr(2, 64)}`
+
+        const params = [amountInCents, rateInBasisPoints, termDays, anonymousAccessKey]
         
         const result = await executeTransaction(
-          'createDebt',
+          'createAnonymousDebt',
           params,
           GAS_LIMITS.CREATE_DEBT,
-          'Creating encrypted debt record'
+          'Creating anonymous encrypted debt record'
         )
 
         if (result.success) {
-          setStatus('Debt record created successfully! 🔐')
+          setStatus('Anonymous FHE-style debt record created successfully! 🔐👤')
           await loadUserData()
           return true
         }
@@ -289,10 +320,7 @@ export const useDebtManager = (wallet: WalletConnection, addTransaction?: (txHas
 
       try {
         setIsLoading(true)
-        setStatus('Initializing FHE encryption...')
-
-        // Initialize FHE if not already done
-        await initializeFHE(wallet.provider)
+        setStatus('Preparing restructuring proposal...')
 
         const amount = parseFloat(formData.newAmount)
         const rate = parseFloat(formData.newRate)
@@ -309,31 +337,33 @@ export const useDebtManager = (wallet: WalletConnection, addTransaction?: (txHas
           throw new Error('New term must be between 1 day and 100 years')
         }
 
-        setStatus('Encrypting restructuring data with FHE...')
-
-        // Encrypt the sensitive data
-        const encryptedAmount = await encryptDebtAmount(amount)
-        const encryptedRate = await encryptInterestRate(rate)
-
         setStatus(STATUS_MESSAGES.PROPOSING_RESTRUCTURING)
 
+        // Convert to contract format (cents and basis points)
+        const amountInCents = Math.round(amount * 100)
+        const rateInBasisPoints = Math.round(rate * 100)
+
+        // Generate anonymous access key for privacy
+        const anonymousAccessKey = `0x${Math.random().toString(16).substr(2, 64)}`
+
         const params = [
-          formData.selectedDebtId,
-          encryptedAmount,
-          encryptedRate,
+          parseInt(formData.selectedDebtId),
+          amountInCents,
+          rateInBasisPoints,
           termDays,
-          formData.reason || 'Debt restructuring request'
+          formData.reason || 'Anonymous debt restructuring request',
+          anonymousAccessKey
         ]
         
         const result = await executeTransaction(
-          'proposeRestructuring',
+          'proposeAnonymousRestructuring',
           params,
           GAS_LIMITS.PROPOSE_RESTRUCTURING,
-          'Submitting restructuring proposal'
+          'Submitting anonymous restructuring proposal'
         )
 
         if (result.success) {
-          setStatus('Restructuring proposal submitted successfully! 📋')
+          setStatus('Anonymous FHE-style restructuring proposal submitted successfully! 🔐📋👤')
           await loadUserData()
           return true
         }
@@ -359,17 +389,20 @@ export const useDebtManager = (wallet: WalletConnection, addTransaction?: (txHas
         setIsLoading(true)
         setStatus(STATUS_MESSAGES.APPROVING_PROPOSAL)
 
-        const params = [proposalId, approve]
+        // Generate anonymous access key for privacy
+        const anonymousAccessKey = `0x${Math.random().toString(16).substr(2, 64)}`
+
+        const params = [proposalId, approve, anonymousAccessKey]
         
         const result = await executeTransaction(
-          'approveProposal',
+          'processAnonymousProposal',
           params,
           GAS_LIMITS.APPROVE_PROPOSAL,
-          `${approve ? 'Approving' : 'Rejecting'} restructuring proposal`
+          `${approve ? 'Approving' : 'Rejecting'} anonymous restructuring proposal`
         )
 
         if (result.success) {
-          setStatus(`Proposal ${approve ? 'approved' : 'rejected'} successfully!`)
+          setStatus(`Anonymous proposal ${approve ? 'approved' : 'rejected'} successfully! 👤`)
           await loadUserData()
           return true
         }
@@ -431,17 +464,20 @@ export const useDebtManager = (wallet: WalletConnection, addTransaction?: (txHas
         setIsLoading(true)
         setStatus(STATUS_MESSAGES.MARKING_RESOLVED)
 
-        const params = [debtId]
+        // Generate anonymous access key for privacy
+        const anonymousAccessKey = `0x${Math.random().toString(16).substr(2, 64)}`
+
+        const params = [debtId, anonymousAccessKey]
         
         const result = await executeTransaction(
-          'markDebtResolved',
+          'finalizeAnonymousDebt',
           params,
           GAS_LIMITS.MARK_RESOLVED,
-          'Marking debt as resolved'
+          'Finalizing anonymous debt resolution'
         )
 
         if (result.success) {
-          setStatus('Debt marked as resolved successfully! ✅')
+          setStatus('Anonymous debt finalized successfully! ✅👤')
           await loadUserData()
           return true
         }

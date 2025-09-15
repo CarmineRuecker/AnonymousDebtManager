@@ -26,6 +26,8 @@ export enum ProposalStatus {
 export interface DebtRecord {
   id: number
   debtor: string
+  amount: number
+  interestRate: number
   originalTerm: number
   remainingTerm: number
   createdAt: number
@@ -37,6 +39,8 @@ export interface RestructuringProposal {
   id: number
   debtId: number
   proposer: string
+  newAmount: number
+  newRate: number
   newTerm: number
   proposedAt: number
   status: ProposalStatus
