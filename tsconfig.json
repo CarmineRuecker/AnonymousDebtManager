@@ -29,6 +29,6 @@
       "@/constants/*": ["./src/constants/*"]
     }
   },
-  "include": ["src", "scripts", "test", "hardhat.config.ts"],
-  "exclude": ["node_modules", "dist", "artifacts", "cache", "types"]
+  "include": ["src"],
+  "exclude": ["node_modules", "dist", "artifacts", "cache", "types", "scripts", "test", "hardhat.config.ts", "contracts"]
 }

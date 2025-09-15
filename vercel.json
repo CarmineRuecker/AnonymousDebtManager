@@ -2,6 +2,7 @@
   "version": 2,
   "name": "anonymous-debt-restructuring",
   "buildCommand": "npm run build",
+  "ignoreCommand": "git diff --quiet HEAD^ HEAD ./src/ ./public/ ./package.json ./tsconfig.json ./vite.config.ts",
   "outputDirectory": "dist",
   "installCommand": "npm install",
   "framework": "vite",
