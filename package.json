@@ -1,51 +1,24 @@
 {
-  "name": "anonymous-debt-restructuring",
+  "name": "zama-fhe-dapp",
   "private": true,
   "version": "1.0.0",
-  "description": "Privacy-first debt management platform using blockchain encryption technology",
-  "keywords": [
-    "debt-management",
-    "privacy",
-    "anonymity",
-    "restructuring",
-    "blockchain",
-    "encryption",
-    "defi",
-    "financial-privacy",
-    "web3",
-    "ethereum",
-    "react",
-    "typescript",
-    "vite"
-  ],
-  "author": "Anonymous Debt Restructuring Platform",
-  "license": "MIT",
-  "homepage": "https://anonymous-debt-restructuring.vercel.app",
-  "repository": {
-    "type": "git",
-    "url": "https://github.com/username/anonymous-debt-restructuring.git"
-  },
+  "description": "Zama FHE (Fully Homomorphic Encryption) DApp",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
+    "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc --noEmit"
+    "clean": "rm -rf dist node_modules/.vite"
   },
   "dependencies": {
-    "@types/node": "22.8.1",
-    "@types/react": "18.3.12",
-    "@types/react-dom": "18.3.1",
-    "ethers": "6.13.4",
-    "react": "18.3.1",
-    "react-dom": "18.3.1",
-    "typescript": "5.6.3"
+    "ethers": "^6.15.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
   },
   "devDependencies": {
-    "@vitejs/plugin-react": "4.3.3",
-    "vite": "^5.4.10"
-  },
-  "engines": {
-    "node": ">=18.0.0",
-    "npm": ">=9.0.0"
+    "@types/react": "^18.2.0",
+    "@types/react-dom": "^18.2.0",
+    "@vitejs/plugin-react": "^4.0.0",
+    "typescript": "^5.0.0",
+    "vite": "^4.4.0"
   }
 }
